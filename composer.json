@@ -3,7 +3,7 @@
     "type": "magento-module",
     "license": "GNU-General-Public-License",
     "homepage": "",
-    "description": "E-check payment module for the BluePay gateway.",
+    "description": "Echeck payment module for the BluePay gateway.",
     "authors": [
     {
         "name": "Justin Slingerland",

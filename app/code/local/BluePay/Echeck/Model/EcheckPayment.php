@@ -25,10 +25,11 @@
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
  
-class BluePay_Echeck_Model_EcheckPayment extends Mage_Paygate_Model_Authorizenet
+class BluePay_Echeck_Model_EcheckPayment extends Mage_Payment_Model_Method_Cc
 {
 
-const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
+    const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
+    const CURRENT_VERSION = '1.5.1.0';
 
 
     const REQUEST_METHOD_CC     = 'CREDIT';
@@ -37,7 +38,7 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
     const REQUEST_TYPE_AUTH_CAPTURE = 'SALE';
     const REQUEST_TYPE_AUTH_ONLY    = 'AUTH';
     const REQUEST_TYPE_CAPTURE_ONLY = 'CAPTURE';
-    const REQUEST_TYPE_CREDIT       = 'CREDIT';
+    const REQUEST_TYPE_CREDIT       = 'REFUND';
     const REQUEST_TYPE_VOID         = 'VOID';
     const REQUEST_TYPE_PRIOR_AUTH_CAPTURE = 'PRIOR_AUTH_CAPTURE';
 
@@ -86,6 +87,7 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
     protected $_canCapture              = true;
     protected $_canCapturePartial       = true;
     protected $_canRefund               = true;
+	protected $_canRefundInvoicePartial = true;
     protected $_canVoid                 = true;
     protected $_canUseInternal          = true;
     protected $_canUseCheckout          = true;
@@ -129,11 +131,7 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
     public function capture(Varien_Object $payment, $amount)
     {
         $error = false;
-        if ($payment->getCcTransId()) {
-            $payment->setTransactionType(self::REQUEST_TYPE_AUTH_CAPTURE);
-        } else {
-            $payment->setTransactionType(self::REQUEST_TYPE_AUTH_CAPTURE);
-        }
+        $payment->setTransactionType(self::REQUEST_TYPE_AUTH_CAPTURE);
         $payment->setAmount($amount);
 
         $request= $this->_buildRequest($payment);
@@ -265,6 +263,8 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
 
         switch ($payment->getPaymentType()) {
             case self::REQUEST_METHOD_ECHECK:
+				if ($payment->getEcheckAccountType() == "BUSINESSCHECKING")
+					$payment->setEcheckAccountType('C');
                 $request->setAchRouting($payment->getEcheckRoutingNumber())
                     ->setAchAccount($payment->getEcheckBankAcctNum())
                     ->setAchAccountType($payment->getEcheckAccountType())
@@ -292,6 +292,7 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
         	$client->setConfig(array(
             	'maxredirects'=>0,
             	'timeout'=>30,
+		'useragent' => 'BluePay Magento ACH Plugin/' . self::CURRENT_VERSION,
         	));
         	$client->setParameterPost($request->getData());
         	$client->setMethod(Zend_Http_Client::POST);
@@ -332,6 +333,28 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
 	}
         return $result;
     }
+
+    public function validateRoutingNumber($routingNumber) {
+        $routingNumber = preg_replace('[\D]', '', $routingNumber); //only digits
+        if(strlen($routingNumber) != 9) {
+            return false;
+        }
+
+        $checkSum = 0;
+        for ($i = 0, $j = strlen($routingNumber); $i < $j; $i+= 3 ) {
+            //loop through routingNumber character by character
+            $checkSum += ($routingNumber[$i] * 3);
+            $checkSum += ($routingNumber[$i+1] * 7);
+            $checkSum += ($routingNumber[$i+2]);
+        }
+
+        if($checkSum != 0 and ($checkSum % 10) == 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     
 	public function validate()
     {
@@ -361,6 +384,8 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
             $errorCode = 'echeck_account_type';
             $errorMsg = $this->_getHelper()->__('Account type is not allowed for this payment method '. $info->getAccountType());
         }
+	$errorMsg = (!$this->validateRoutingNumber($info->getEcheckRoutingNumber())) ? 'Invalid Routing Number entered.' : $errorMsg;
+	$errorMsg = (!is_numeric($info->getEcheckBankAcctNum())) ? 'Invalid Account Number entered.' : $errorMsg;
         if($errorMsg && $this->getConfigData('use_iframe') == '0')
         {
             Mage::throwException($errorMsg);
@@ -447,11 +472,12 @@ const CGI_URL = 'https://secure.bluepay.com/interfaces/bp10emu';
 		return bin2hex( md5($hashstr, true) );
 	}	
  
-	protected function parseHeader($header, $nameVal, $pos) {
-		$nameVal = ($nameVal == 'name') ? '0' : '1';
-		$s = explode("?", $header);
-		$t = explode("&", $s[1]);
-		$value = explode("=", $t[$pos]);
-		return $value[$nameVal];
-	}
+    protected function parseHeader($header, $nameVal, $pos) {
+	$nameVal = ($nameVal == 'name') ? '0' : '1';
+	$s = explode("?", $header);
+	$t = explode("&", $s[1]);
+	$value = explode("=", $t[$pos]);
+	return $value[$nameVal];
+    }
+
 }

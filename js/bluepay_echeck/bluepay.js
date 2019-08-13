@@ -110,4 +110,4 @@ BluePay.prototype = {
     },
 
     isSuccess: false
-}
+};

@@ -33,7 +33,8 @@ class BluePay_Echeck_Block_Info_Echeck extends Mage_Payment_Block_Info
     {
         parent::_construct();
 
-        $this->setTemplate('payment/info/echeck.phtml');
+        //$this->setTemplate('payment/info/echeck.phtml');
+	$this->setTemplate('payment/info/default.phtml');
     }
 
     public function getAccountTypeName()
@@ -63,8 +64,8 @@ class BluePay_Echeck_Block_Info_Echeck extends Mage_Payment_Block_Info
         }
         return $info;
     }
-    
-	public function unmapData($info)
+
+    public function unmapData($info)
     {
         $info->setEcheckRoutingNumber($info->getCcLast4())
             ->setEcheckBankName($info->getCcNumberEnc())

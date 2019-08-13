@@ -30,7 +30,7 @@ class BluePay_Echeck_Block_Form_Echeck extends Mage_Payment_Block_Form
     protected function _construct()
     {
         parent::_construct();
-        $this->setTemplate('payment/form/echeck.phtml');
+        //$this->setTemplate('payment/form/echeck.phtml');
     }
 
     protected function _getConfig()

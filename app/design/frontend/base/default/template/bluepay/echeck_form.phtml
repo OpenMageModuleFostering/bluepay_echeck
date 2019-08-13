@@ -1,15 +1,28 @@
-<?PHP
-if (Mage::getStoreConfig('payment/echeckpayment/use_iframe') == '0') {
+<?php
+if ((Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() == 'echeckpayment' && 
+	Mage::getStoreConfig('payment/echeckpayment/use_iframe') == '0') || 
+	(Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() == 'ccpayment' &&
+	Mage::getStoreConfig('payment/ccpayment/use_iframe') == '0') || 
+	((Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() != 'echeckpayment') &&
+	(Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() != 'ccpayment')))
     return false;
-}
 $_initial = true;
 $_form = $this;
 $_code = $_form->getMethodCode();
 $_method = $_form->getMethod();
-$_accID = Mage::getStoreConfig('payment/echeckpayment/login');
-$_secKey = Mage::getStoreConfig('payment/echeckpayment/trans_key');
-$_transType = Mage::getStoreConfig('payment/echeckpayment/payment_action');
-$_transMode = Mage::getStoreConfig('payment/echeckpayment/test_mode');
+if (Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() == 'echeckpayment') {
+    $_accID = Mage::getStoreConfig('payment/echeckpayment/login');
+    $_secKey = Mage::getStoreConfig('payment/echeckpayment/trans_key');
+    $_transType = Mage::getStoreConfig('payment/echeckpayment/payment_action');
+    $_transMode = Mage::getStoreConfig('payment/echeckpayment/test_mode');
+} else {
+    $_accID = Mage::getStoreConfig('payment/ccpayment/login');
+    $_secKey = Mage::getStoreConfig('payment/ccpayment/trans_key');
+    $_transType = Mage::getStoreConfig('payment/ccpayment/payment_action');
+    $_transMode = Mage::getStoreConfig('payment/ccpayment/test_mode');
+    $_cvv2 = Mage::getStoreConfig('payment/ccpayment/useccv');
+}
+    
 $_storeUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
 $totals = Mage::getSingleton('checkout/session')->getQuote()->getTotals();
 $_amount = $totals["grand_total"]->getValue();
@@ -32,8 +45,49 @@ foreach ($session->getQuote()->getAllItems() as $item) {
     $comment .= $item->getBaseCalculationPrice . ' ';
 }
 $shpfTPS = md5($_secKey . $_amount . $customerName . $city . $state . $zip . $phone . $email);
-$_url = 'https://secure.bluepay.com/interfaces/shpf?SHPF_FORM_ID=magentoach&SHPF_ACCOUNT_ID=' . $_accID . '&SHPF_TPS_DEF=AMOUNT NAME CITY STATE ZIPCODE PHONE EMAIL' . '&SHPF_TPS=' . $shpfTPS . '&TRANS_TYPE=' . $_transType . '&KEY=' . $_secKey . '&MODE=' . $_transMode . '&NAME=' . $customerName . '&STORE_URL=' . $_storeUrl . '&AMOUNT=' . $_amount . '&ADDR1=' . $billingAddress . '&CITY=' . $city . '&STATE=' . $state . '&ZIPCODE=' . $zip . '&COUNTRY=' . $country . '&PHONE=' . $phone . '&EMAIL=' . $email . '&COMMENT=' . $comment;
 
+if (Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() == 'echeckpayment') {
+    $_url = 'https://secure.bluepay.com/interfaces/shpf?SHPF_FORM_ID=magentoach' .
+	'&SHPF_ACCOUNT_ID=' . urlencode($_accID) . 
+	'&SHPF_TPS_DEF=AMOUNT NAME CITY STATE ZIPCODE PHONE EMAIL' . 
+	'&SHPF_TPS=' . urlencode($shpfTPS) . 
+	'&TRANS_TYPE=' . urlencode($_transType) . 
+	'&KEY=' . urlencode($_secKey) . 
+	'&MODE=' . urlencode($_transMode) . 
+	'&NAME=' . urlencode($customerName) . 
+	'&STORE_URL=' . urlencode($_storeUrl) . 
+	'&AMOUNT=' . urlencode($_amount) . 
+	'&ADDR1=' . urlencode($billingAddress) . 
+	'&CITY=' . urlencode($city) . 
+	'&STATE=' . urlencode($state) . 
+	'&ZIPCODE=' . urlencode($zip) . 
+	'&COUNTRY=' . urlencode($country) . 
+	'&PHONE=' . urlencode($phone) . 
+	'&EMAIL=' . urlencode($email) .
+	'&PLUGIN_VERSION=1.5.1.3' . 
+	'&COMMENT=' . urlencode($comment);
+} else {
+    $_url = 'https://secure.bluepay.com/interfaces/shpf?SHPF_FORM_ID=magentocc' .
+        '&SHPF_ACCOUNT_ID=' . urlencode($_accID) .
+        '&SHPF_TPS_DEF=AMOUNT NAME CITY STATE ZIPCODE PHONE EMAIL' .
+        '&SHPF_TPS=' . urlencode($shpfTPS) .
+        '&TRANS_TYPE=' . urlencode($_transType) .
+        '&KEY=' . urlencode($_secKey) .
+        '&MODE=' . urlencode($_transMode) .
+        '&USE_CVV2=' . urlencode($_cvv2) .
+        '&NAME=' . urlencode($customerName) .
+        '&STORE_URL=' . urlencode($_storeUrl) .
+        '&AMOUNT=' . urlencode($_amount) .
+        '&ADDR1=' . urlencode($billingAddress) .
+        '&CITY=' . urlencode($city) .
+        '&STATE=' . urlencode($state) .
+        '&ZIPCODE=' . urlencode($zip) .
+        '&COUNTRY=' . urlencode($country) .
+        '&PHONE=' . urlencode($phone) .
+        '&EMAIL=' . urlencode($email) .
+	'&PLUGIN_VERSION=1.5.5.2' .
+        '&COMMENT=' . urlencode($comment);
+}
 ?>
 <html>
   <body>
@@ -41,5 +95,24 @@ $_url = 'https://secure.bluepay.com/interfaces/shpf?SHPF_FORM_ID=magentoach&SHPF
 <script>
 iframeSocket("<?php echo $_url;?>");
 </script>
+<?php if (Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod() == 'echeckpayment'): ?>
+<style type="text/css">
+    iframe {
+	overflow: hidden;
+        width: 100%;
+        height: 180px;
+        border: 0px;
+    }
+</style>
+<?php else: ?>
+<style type="text/css">
+    iframe {
+        overflow: hidden;
+        width: 100%;
+        height: 125px;
+        border: 0px;
+    }
+</style>
+<?php endif; ?>
   </body>
 </html>

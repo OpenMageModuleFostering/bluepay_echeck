@@ -23,7 +23,11 @@
  * @copyright   Copyright (c) 2012 Magento Inc. (http://www.magentocommerce.com)
  * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
-$save = (Mage::getStoreConfig('payment/echeckpayment/use_iframe') == '1') ? 'process()' :'checkReview();bluepay.save()';
+$method = Mage::getSingleton('checkout/session')->getQuote()->getPayment()->getMethod();
+if ($method == ('ccpayment' || 'echeckpayment'))
+	$save = (Mage::getStoreConfig('payment/' . $method . '/use_iframe') == '1') ? 'process()' : 'checkReview();bluepay.save()';
+else
+	$save = 'review.save()';
 ?>
 <script>
 </script>

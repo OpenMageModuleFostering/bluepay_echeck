@@ -29,8 +29,12 @@ class BluePay_Echeck_Block_Form extends Mage_Payment_Block_Form
     protected function _construct()
     {
         parent::_construct();
+		if (Mage::app()->getStore()->isAdmin()) {
+			$this->setTemplate('bluepay/echeck.phtml');
+			return;
+		}
 	if (Mage::getStoreConfig('payment/echeckpayment/use_iframe') == 1) {
-        	$this->setTemplate('bluepay/echeckiframe.phtml');
+        	$this->setTemplate('bluepay/echeck_iframe.phtml');
 	} else {
 		$this->setTemplate('bluepay/echeck.phtml');
 	}
@@ -49,7 +53,6 @@ class BluePay_Echeck_Block_Form extends Mage_Payment_Block_Form
     public function getMethod()
     {
         $method = $this->getData('method');
-
         if (!($method instanceof Mage_Payment_Model_Method_Abstract)) {
             Mage::throwException($this->__('Cannot retrieve the payment method model object.'));
         }
