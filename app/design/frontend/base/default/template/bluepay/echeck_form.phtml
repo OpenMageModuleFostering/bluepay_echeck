@@ -1,0 +1,45 @@
+<?PHP
+if (Mage::getStoreConfig('payment/echeckpayment/use_iframe') == '0') {
+    return false;
+}
+$_initial = true;
+$_form = $this;
+$_code = $_form->getMethodCode();
+$_method = $_form->getMethod();
+$_accID = Mage::getStoreConfig('payment/echeckpayment/login');
+$_secKey = Mage::getStoreConfig('payment/echeckpayment/trans_key');
+$_transType = Mage::getStoreConfig('payment/echeckpayment/payment_action');
+$_transMode = Mage::getStoreConfig('payment/echeckpayment/test_mode');
+$_storeUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB);
+$totals = Mage::getSingleton('checkout/session')->getQuote()->getTotals();
+$_amount = $totals["grand_total"]->getValue();
+$customerName = Mage::helper('customer')->getCustomerName();
+$address = Mage::getSingleton('checkout/session')->getQuote()->getBillingAddress();
+$billingAddress = $address->getStreetFull();
+$country = $address->getCountryId();
+$city = $address->getCity();
+$state = $address->getRegion();
+$zip = $address->getPostcode();
+$phone = $address->getTelephone();
+$email = $address->getEmail();
+$session = Mage::getSingleton('checkout/session');
+$comment = "";
+foreach ($session->getQuote()->getAllItems() as $item) {
+    $comment .= $item->getQty() . ' ';
+    $comment .= '[' . $item->getSku() . ']' . ' ';
+    $comment .= $item->getName() . ' ';
+    $comment .= $item->getDescription() . ' ';
+    $comment .= $item->getBaseCalculationPrice . ' ';
+}
+$shpfTPS = md5($_secKey . $_amount . $customerName . $city . $state . $zip . $phone . $email);
+$_url = 'https://secure.bluepay.com/interfaces/shpf?SHPF_FORM_ID=magentoach&SHPF_ACCOUNT_ID=' . $_accID . '&SHPF_TPS_DEF=AMOUNT NAME CITY STATE ZIPCODE PHONE EMAIL' . '&SHPF_TPS=' . $shpfTPS . '&TRANS_TYPE=' . $_transType . '&KEY=' . $_secKey . '&MODE=' . $_transMode . '&NAME=' . $customerName . '&STORE_URL=' . $_storeUrl . '&AMOUNT=' . $_amount . '&ADDR1=' . $billingAddress . '&CITY=' . $city . '&STATE=' . $state . '&ZIPCODE=' . $zip . '&COUNTRY=' . $country . '&PHONE=' . $phone . '&EMAIL=' . $email . '&COMMENT=' . $comment;
+
+?>
+<html>
+  <body>
+  <br /><!-- use css to style this and its contained iframe --><br /><div id="container"></div>
+<script>
+iframeSocket("<?php echo $_url;?>");
+</script>
+  </body>
+</html>

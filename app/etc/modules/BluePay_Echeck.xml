@@ -1,0 +1,8 @@
+<config>
+    <modules>
+        <BluePay_Echeck>
+            <active>true</active>
+            <codePool>local</codePool>
+        </BluePay_Echeck>
+    </modules>
+</config>
