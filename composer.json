@@ -1,5 +1,5 @@
 {
-    "name": "OpenMageModuleFostering\/BluePay_Echeck",
+    "name": "openmage-module-fostering\/bluepay_echeck",
     "type": "magento-module",
     "license": "GNU-General-Public-License",
     "homepage": "",
